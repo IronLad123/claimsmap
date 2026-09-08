@@ -143,4 +143,3 @@ elif value_delta > 5% with same T, S, M:                   → GENUINE_CONTRADIC
 
 ---
 
-**Submit**: https://forms.gle/3fLdBQ2D6Zm2Gqtv7
