@@ -20,10 +20,29 @@ Every claim is strictly anchored with **verbatim source quotes**, normalized acr
 
 | Resource | Link | Description |
 |---|---|---|
+| **Demo Walkthrough Video** | [Watch on Google Drive](https://drive.google.com/file/d/1rzCIw4Oeyoii2epKI63uCocfFp4S6LpG/view?usp=sharing) | Full video demonstration covering ingestion, grounded facts, and all 4 showcase cases |
 | **Live Production App** | [https://frontend-kappa-mauve-41.vercel.app](https://frontend-kappa-mauve-41.vercel.app) | Live deployment hosted on Vercel with all pre-seeded documents & analysis |
 | **GitHub Repository** | [IronLad123/claimsmap](https://github.com/IronLad123/claimsmap) | Full source code, test suites, and starter PDF datasets |
 | **Local Web UI** | `http://localhost:3000` | Local Next.js App Router frontend |
 | **API Docs (Swagger)** | `http://localhost:8000/docs` | Interactive OpenAPI documentation for all endpoints |
+
+---
+
+## 🎥 Video Walkthrough
+
+Watch the complete demonstration of ClaimsMap:
+
+👉 **[Watch Video Walkthrough on Google Drive](https://drive.google.com/file/d/1rzCIw4Oeyoii2epKI63uCocfFp4S6LpG/view?usp=sharing)**
+
+**Covered in the walkthrough:**
+1. **Forensic Ingestion**: Uploading Delhivery's Q4 FY24 Earnings Presentation with coordinate-aware parsing and OrcaRouter LLM extraction.
+2. **Grounded Facts Explorer**: Substring verification, verbatim source citations, and real-time filtering across metrics and data types.
+3. **The 4 Benchmark Showcase Scenarios**:
+   - **Case 1 (Corroboration)**: ₹81,415M vs ₹8,142 Cr ($\Delta = 0.0056\%$).
+   - **Case 2 (Contradiction)**: RBI 11-month vs IMF 8-month forex import cover definitional denominator conflict.
+   - **Case 3A (Scope)**: Standalone parent vs consolidated group perimeters under Ind AS.
+   - **Case 3B (Methodology)**: Adjusted EBITDA cash operating proxy vs Ind AS statutory net PAT.
+4. **PDF Edge-Case Mitigations**: Table column-shift parenthetical negatives `(217)` $\rightarrow$ `-217` and superscript footnote contamination `18,793(1)` $\rightarrow$ `18,793`.
 
 ---
 

@@ -32,6 +32,7 @@
 
 | Component | Target | Status | Specifications |
 |---|---|---|---|
+| **Demo Walkthrough Video** | Google Drive (2m 59s) | ✅ READY | [Watch Video Walkthrough](https://drive.google.com/file/d/1rzCIw4Oeyoii2epKI63uCocfFp4S6LpG/view?usp=sharing) |
 | **Production Frontend** | Vercel Serverless Edge | ✅ LIVE | [frontend-kappa-mauve-41.vercel.app](https://frontend-kappa-mauve-41.vercel.app) |
 | **Source Control** | GitHub Public Repo | ✅ LIVE | [IronLad123/claimsmap](https://github.com/IronLad123/claimsmap) |
 | **Local Full-Stack** | `localhost:3000` & `8000` | ✅ RUNNING | Next.js 15 App Router + FastAPI uvicorn ASGI |
@@ -578,13 +579,13 @@ The assignment specifically calls out 4 bonus extensions:
 Updated from the official `superjoin-vit-2026-assignment.pdf` (verbatim from "Before You Submit"):
 
 ```markdown
-- [ ] The project runs from README instructions and accepts new PDFs through an API or UI.
-- [ ] Results contain facts, source evidence, and cross-document relationships.
-- [ ] All 4 required cases demonstrated (Corroborated, Contradiction, Reconciled, Failure).
-- [ ] Approach documented + demo video ≤ 3 minutes included.
-- [ ] GitHub repository link submitted at: https://forms.gle/3fLdBQ2D6Zm2Gqtv7
-- [ ] No credentials committed to the repository.
-- [ ] Sample data included so evaluator can run without Gemini API key.
+- [x] The project runs from README instructions and accepts new PDFs through an API or UI.
+- [x] Results contain facts, source evidence, and cross-document relationships.
+- [x] All 4 required cases demonstrated (Corroborated, Contradiction, Reconciled, Failure).
+- [x] Approach documented + demo video ≤ 3 minutes included: [Watch Video](https://drive.google.com/file/d/1rzCIw4Oeyoii2epKI63uCocfFp4S6LpG/view?usp=sharing)
+- [x] GitHub repository link: https://github.com/IronLad123/claimsmap
+- [x] No credentials committed to the repository.
+- [x] Sample data included so evaluator can run without external API keys.
 ```
 
 ---
