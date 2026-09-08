@@ -5,16 +5,22 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true" or not GEMINI_API_KEY
+
+# LLM Provider Configuration (gemini | ollama)
+# If LLM_PROVIDER env is explicitly set, honour it.
+# Otherwise prefer ollama when no Gemini key is available.
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini" if GEMINI_API_KEY else "ollama")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+
+# DEMO_MODE: true only if explicitly requested via env.
+# Using Ollama is NOT demo mode — it is a live local LLM provider.
+DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
+
 SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "data/facts.db")
 STARTER_DATASETS_DIR = Path(__file__).parent.parent.parent / "starter-datasets"
 DATA_DIR = Path(__file__).parent.parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
-
-# LLM Provider Configuration (gemini | ollama)
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama" if not GEMINI_API_KEY else "gemini")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
 
 # Security and validation limits
 MAX_UPLOAD_SIZE_BYTES = int(os.getenv("MAX_UPLOAD_SIZE_MB", "30")) * 1024 * 1024

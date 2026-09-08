@@ -16,7 +16,7 @@ from app.models.schemas import IngestResponse, IngestionJobOut
 from app.ingestion.parser import extract_document, get_page_count
 from app.extraction.extractor import process_chunks
 from app.reconciliation.engine import run_reconciliation
-from app.config import DEMO_MODE, MAX_UPLOAD_SIZE_BYTES, MAX_PAGE_COUNT
+from app.config import DEMO_MODE, MAX_UPLOAD_SIZE_BYTES, MAX_PAGE_COUNT, LLM_PROVIDER, OLLAMA_MODEL
 
 logger = logging.getLogger("fact_layer.ingest")
 router = APIRouter(prefix='/api', tags=['ingest'])
@@ -74,7 +74,12 @@ def process_ingestion_background(
             job.status = "extracting"
             job.stage = "extracting"
             job.progress = 0.55
-            mode_desc = "deterministic rule engine (demo mode)" if DEMO_MODE else "Gemini 1.5 Pro"
+            if LLM_PROVIDER == "ollama":
+                mode_desc = f"local Ollama ({OLLAMA_MODEL})"
+            elif LLM_PROVIDER == "gemini":
+                mode_desc = "Gemini 1.5 Pro"
+            else:
+                mode_desc = "deterministic rule engine"
             job.message = f"Extracting and grounding facts using {mode_desc}..."
             job.updated_at = datetime.utcnow()
             session.add(job)
