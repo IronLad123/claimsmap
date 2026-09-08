@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -21,119 +22,257 @@ interface IngestResult {
   demo_mode: boolean
 }
 
+function FileIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+    </svg>
+  )
+}
+
+function UploadIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+    </svg>
+  )
+}
+
+function Spinner() {
+  return (
+    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+    </svg>
+  )
+}
+
 export default function HomePage() {
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<IngestResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [docs, setDocs] = useState<DocItem[]>([])
   const [dragging, setDragging] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const fetchDocs = useCallback(async () => {
     try {
       const res = await fetch(`${API}/api/documents`)
-      setDocs(await res.json())
-    } catch { setDocs([]) }
+      if (res.ok) setDocs(await res.json())
+    } catch { /* server may not be up yet */ }
   }, [])
 
   useEffect(() => { fetchDocs() }, [fetchDocs])
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError('Only PDF files are accepted.'); return
+      setError('Only PDF files are supported.')
+      return
     }
-    setUploading(true); setError(null); setResult(null)
+    setUploading(true)
+    setError(null)
+    setResult(null)
     const form = new FormData()
     form.append('file', file)
     try {
       const res = await fetch(`${API}/api/ingest`, { method: 'POST', body: form })
-      if (!res.ok) throw new Error(await res.text())
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(body || `HTTP ${res.status}`)
+      }
       const data: IngestResult = await res.json()
       setResult(data)
       fetchDocs()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Upload failed')
-    } finally { setUploading(false) }
-  }
+      setError(e instanceof Error ? e.message : 'Upload failed. Is the backend running?')
+    } finally {
+      setUploading(false)
+    }
+  }, [fetchDocs])
 
   const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setDragging(false)
+    e.preventDefault()
+    setDragging(false)
     const file = e.dataTransfer.files[0]
     if (file) uploadFile(file)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [uploadFile])
+
+  const domainLabel: Record<string, string> = {
+    delhivery: 'Delhivery',
+    'india-macroeconomy': 'India Macro',
+    custom: 'Custom',
+  }
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Fact Knowledge Layer</h1>
-        <p className="mt-2 text-gray-500 max-w-2xl">Upload any PDF. The system extracts structured facts, links them across documents, and explains corroborations, contradictions, and context-resolved conflicts.</p>
+      {/* Page header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Document Ingestion</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Upload a PDF to extract structured facts and run cross-document reconciliation.
+          </p>
+        </div>
+        {docs.length > 0 && (
+          <Link
+            href="/compare"
+            className="text-sm font-medium text-violet-600 hover:text-violet-700 transition-colors"
+          >
+            View analysis →
+          </Link>
+        )}
       </div>
 
+      {/* Upload zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`border-2 border-dashed rounded-2xl p-14 text-center transition-colors cursor-pointer ${
-          dragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 bg-white hover:border-indigo-400'
-        }`}
+        onClick={() => !uploading && inputRef.current?.click()}
+        className={`
+          relative border-2 border-dashed rounded-xl transition-all cursor-pointer select-none
+          ${dragging
+            ? 'border-violet-400 bg-violet-50'
+            : 'border-gray-200 bg-white hover:border-violet-300 hover:bg-gray-50'
+          }
+        `}
       >
-        <div className="text-6xl mb-4">📄</div>
-        <p className="text-lg font-semibold text-gray-700">Drag & drop a PDF here</p>
-        <p className="text-sm text-gray-400 mt-1 mb-4">or click to choose a file</p>
-        <label className="cursor-pointer">
-          <span className={`px-6 py-2.5 rounded-lg text-sm font-medium text-white transition ${
-            uploading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'
-          }`}>
-            {uploading ? 'Processing…' : 'Choose PDF'}
-          </span>
-          <input
-            type="file" accept=".pdf" className="hidden"
-            disabled={uploading}
-            onChange={(e) => { if (e.target.files?.[0]) uploadFile(e.target.files[0]) }}
-          />
-        </label>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".pdf"
+          className="sr-only"
+          disabled={uploading}
+          onChange={(e) => { if (e.target.files?.[0]) uploadFile(e.target.files[0]) }}
+        />
+        <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${dragging ? 'bg-violet-100' : 'bg-gray-100'}`}>
+            <UploadIcon className={`w-6 h-6 ${dragging ? 'text-violet-600' : 'text-gray-500'}`} />
+          </div>
+          <p className="text-sm font-medium text-gray-700">
+            {uploading ? 'Processing document…' : 'Drop a PDF here, or click to browse'}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            {uploading ? 'Extracting facts and running reconciliation' : 'Any financial report, policy document, or research PDF'}
+          </p>
+          {!uploading && (
+            <button
+              type="button"
+              className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+            >
+              <UploadIcon className="w-4 h-4" />
+              Choose file
+            </button>
+          )}
+          {uploading && (
+            <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg opacity-80 cursor-not-allowed">
+              <Spinner />
+              Processing…
+            </div>
+          )}
+        </div>
       </div>
 
-      {result && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6">
-          <h2 className="font-bold text-emerald-800 text-lg">✅ Ingested: {result.filename}</h2>
-          {result.demo_mode && (
-            <p className="mt-2 inline-block text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1">
-              ⚡ Demo mode — pre-seeded data loaded (no Gemini API key required)
-            </p>
-          )}
-          <div className="grid grid-cols-3 gap-4 mt-5">
-            {[['Pages', result.page_count], ['Facts Extracted', result.fact_count], ['Cross-Doc Links', result.link_count]].map(([label, val]) => (
-              <div key={String(label)} className="bg-white rounded-xl border p-4 text-center">
-                <div className="text-3xl font-bold text-indigo-700">{val}</div>
-                <div className="text-xs text-gray-500 mt-1">{label}</div>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => router.push('/compare')}
-            className="mt-5 px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
-          >View Showcase Cases →</button>
+      {/* Error state */}
+      {error && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+          </svg>
+          {error}
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">{error}</div>
+      {/* Success state */}
+      {result && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                <svg className="w-4 h-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">{result.filename}</p>
+                {result.demo_mode && (
+                  <p className="text-xs text-amber-600 mt-0.5">Running in demo mode — no API key required</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 divide-x divide-gray-100">
+            {[
+              { label: 'Pages', value: result.page_count },
+              { label: 'Facts extracted', value: result.fact_count },
+              { label: 'Cross-doc links', value: result.link_count },
+            ].map(({ label, value }) => (
+              <div key={label} className="px-5 py-4 text-center">
+                <p className="text-2xl font-semibold text-gray-900">{value}</p>
+                <p className="text-xs text-gray-500 mt-1">{label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex gap-3">
+            <button
+              onClick={() => router.push('/compare')}
+              className="text-sm font-medium text-violet-600 hover:text-violet-700 transition-colors"
+            >
+              View cross-document analysis →
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={() => router.push('/facts')}
+              className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              Browse extracted facts
+            </button>
+          </div>
+        </div>
       )}
 
+      {/* Document library */}
       <div>
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Document Library</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-gray-700">
+            Loaded documents
+            {docs.length > 0 && (
+              <span className="ml-2 text-xs font-normal text-gray-400">{docs.length} total</span>
+            )}
+          </h2>
+        </div>
+
         {docs.length === 0 ? (
-          <p className="text-gray-400 text-sm">No documents yet. Upload a PDF or run <code className="bg-gray-100 px-1 rounded">make seed</code> for demo data.</p>
+          <div className="text-center py-12 border border-dashed border-gray-200 rounded-xl bg-white">
+            <FileIcon className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-400">No documents yet</p>
+            <p className="text-xs text-gray-300 mt-1">
+              Run <code className="bg-gray-100 px-1 rounded font-mono">make seed</code> to load sample data
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {docs.map((doc) => (
-              <div key={doc.id} className="bg-white border rounded-2xl p-5 hover:shadow-md transition">
-                <div className="text-3xl mb-2">📋</div>
-                <p className="font-semibold text-gray-800 text-sm truncate" title={doc.filename}>{doc.filename}</p>
-                <p className="text-xs text-gray-400 mt-1">{doc.page_count} pages · {doc.domain}</p>
-                <p className="text-xs text-gray-300">{new Date(doc.upload_timestamp).toLocaleDateString()}</p>
+              <div key={doc.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileIcon className="w-4 h-4 text-gray-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate" title={doc.filename}>
+                      {doc.filename.replace(/\d+-/, '').replace(/-excerpt\.pdf$/, '').replace(/-/g, ' ').replace('.pdf', '')}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {doc.page_count} pages
+                      {doc.domain !== 'custom' && (
+                        <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">
+                          {domainLabel[doc.domain] || doc.domain}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
