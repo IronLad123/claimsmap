@@ -7,8 +7,8 @@ import { ReactNode } from 'react'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Superjoin — Document Intelligence',
-  description: 'Cross-document fact extraction, linking, and reconciliation',
+  title: 'ClaimsMap — Cross-Document Fact Verification',
+  description: 'Map, extract, and verify claims across multiple PDF documents',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                       <path d="M2 2h4v4H2zM8 2h4v4H8zM2 8h4v4H2zM8 8h4v4H8z" fill="white" fillOpacity="0.9"/>
                     </svg>
                   </div>
-                  <span className="font-semibold text-gray-900 text-sm">Superjoin</span>
+                  <span className="font-semibold text-gray-900 text-sm">ClaimsMap</span>
                 </Link>
                 <nav className="flex items-center gap-1">
                   <Link href="/" className="px-3 py-1.5 rounded-md text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">

@@ -5,8 +5,8 @@ from app.routers import ingest, facts, links, showcase, documents
 from app.config import DEMO_MODE, ALLOWED_ORIGINS, LLM_PROVIDER, OLLAMA_MODEL, OLLAMA_BASE_URL
 
 app = FastAPI(
-    title='Superjoin — Fact Knowledge Layer',
-    description='Extract, link, and explain facts across multiple PDF documents.',
+    title='ClaimsMap — Fact Knowledge Layer',
+    description='Extract, link, and verify claims across multiple PDF documents.',
     version='1.0.0',
 )
 
