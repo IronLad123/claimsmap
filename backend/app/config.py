@@ -6,11 +6,9 @@ load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# LLM Provider: gemini | ollama | openai_compat
+# LLM Provider: gemini | openai_compat
 # openai_compat works with any OpenAI-compatible API (OrcaRouter, Together, Groq, etc.)
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini" if GEMINI_API_KEY else "ollama")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini" if GEMINI_API_KEY else "openai_compat")
 
 # OpenAI-compatible provider (OrcaRouter, Groq, Together, etc.)
 OPENAI_COMPAT_BASE_URL = os.getenv("OPENAI_COMPAT_BASE_URL", "")
@@ -18,7 +16,6 @@ OPENAI_COMPAT_API_KEY = os.getenv("OPENAI_COMPAT_API_KEY", "")
 OPENAI_COMPAT_MODEL = os.getenv("OPENAI_COMPAT_MODEL", "orcarouter/free")
 
 # DEMO_MODE: true only if explicitly requested via env.
-# Using Ollama is NOT demo mode — it is a live local LLM provider.
 DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
 
 SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", "data/facts.db")

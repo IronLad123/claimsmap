@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 
 from app.config import (
     GEMINI_API_KEY, DEMO_MODE,
-    LLM_PROVIDER, OLLAMA_BASE_URL, OLLAMA_MODEL,
+    LLM_PROVIDER,
     OPENAI_COMPAT_BASE_URL, OPENAI_COMPAT_API_KEY, OPENAI_COMPAT_MODEL,
 )
 from app.models.fact import ChunkCache
@@ -76,50 +76,6 @@ Rationale: {rationale}
 In 2-4 sentences, explain clearly and specifically WHY these facts are {relation_type}.
 Reference the actual numbers, accounting scopes, or definitions. Be concise and precise."""
 
-
-def is_ollama_online() -> bool:
-    """Check if local Ollama server is responding."""
-    try:
-        r = httpx.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=1.5)
-        return r.status_code == 200
-    except Exception:
-        return False
-
-
-def query_ollama_json(prompt: str, model: str = OLLAMA_MODEL) -> List[Dict[str, Any]]:
-    """Query local Ollama with JSON mode constraint."""
-    url = f"{OLLAMA_BASE_URL}/api/generate"
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "format": "json",
-    }
-    with httpx.Client(timeout=60.0) as client:
-        resp = client.post(url, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-        raw_response = data.get("response", "{}")
-        parsed = json.loads(raw_response)
-        if isinstance(parsed, list):
-            return parsed
-        if isinstance(parsed, dict):
-            return parsed.get("facts", parsed.get("data", []))
-        return []
-
-
-def query_ollama_text(prompt: str, model: str = OLLAMA_MODEL) -> str:
-    """Query local Ollama for free-form text response."""
-    url = f"{OLLAMA_BASE_URL}/api/generate"
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-    }
-    with httpx.Client(timeout=45.0) as client:
-        resp = client.post(url, json=payload)
-        resp.raise_for_status()
-        return resp.json().get("response", "").strip()
 
 
 def query_openai_compat_json(prompt: str) -> List[Dict[str, Any]]:
@@ -234,19 +190,7 @@ def extract_facts_from_chunk(
         logger.error("OpenAI-compat provider exhausted retries for chunk %s", chunk_hash[:8])
         return None  # Deterministic fallback
 
-    # Provider 2: Ollama (local)
-    if LLM_PROVIDER == "ollama" or is_ollama_online():
-        try:
-            logger.info("Extracting chunk %s with local Ollama (%s)", chunk_hash[:8], OLLAMA_MODEL)
-            facts = query_ollama_json(prompt, model=OLLAMA_MODEL)
-            _save_cache(facts)
-            return facts
-        except Exception as e:
-            logger.warning("Ollama extraction failed on chunk %s: %s", chunk_hash[:8], e)
-            if not GEMINI_API_KEY:
-                return None
-
-    # Provider 3: Gemini
+    # Provider 2: Gemini
     if GEMINI_API_KEY and not DEMO_MODE:
         client = _get_gemini_pro()
         if client:
@@ -281,7 +225,7 @@ def generate_explanation(
     quote_b: str,
     rationale: str,
 ) -> str:
-    """Generate narrative explanation using Ollama, Gemini, or fallback rationale."""
+    """Generate narrative explanation using OrcaRouter, Gemini, or fallback rationale."""
     prompt = EXPLANATION_PROMPT.format(
         relation_type=relation_type,
         doc_a=doc_a, page_a=page_a, quote_a=quote_a[:350],
@@ -296,14 +240,7 @@ def generate_explanation(
         except Exception as e:
             logger.warning("OpenAI-compat explanation generation failed: %s", e)
 
-    # Provider 2: Ollama (local)
-    if LLM_PROVIDER == "ollama" or is_ollama_online():
-        try:
-            return query_ollama_text(prompt, model=OLLAMA_MODEL)
-        except Exception as e:
-            logger.warning("Ollama explanation generation failed: %s", e)
-
-    # Provider 3: Gemini
+    # Provider 2: Gemini
     if GEMINI_API_KEY and not DEMO_MODE:
         client = _get_gemini_flash()
         if client:
