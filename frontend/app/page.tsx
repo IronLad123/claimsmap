@@ -392,9 +392,9 @@ export default function HomePage() {
         {docs.length === 0 ? (
           <div className="text-center py-12 border border-dashed border-gray-200 rounded-xl bg-white">
             <FileIcon className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-400">No documents yet</p>
-            <p className="text-xs text-gray-300 mt-1">
-              Run <code className="bg-gray-100 px-1 rounded font-mono">make seed</code> to load sample data
+            <p className="text-sm font-medium text-gray-500">No documents loaded yet</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Upload a PDF above to get started
             </p>
           </div>
         ) : (
