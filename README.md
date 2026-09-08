@@ -20,7 +20,7 @@ Every claim is strictly anchored with **verbatim source quotes**, normalized acr
 
 | Resource | Link | Description |
 |---|---|---|
-| **Demo Walkthrough Video** | [Watch on Google Drive](https://drive.google.com/file/d/1rzCIw4Oeyoii2epKI63uCocfFp4S6LpG/view?usp=sharing) | Full video demonstration covering ingestion, grounded facts, and all 4 showcase cases |
+| **Demo Walkthrough Video** | [Watch on Google Drive](https://drive.google.com/file/d/1rzCIw4Oeyoii2epKI63uCocfFp4S6LpG/view?usp=sharing) | Complete video demonstration covering ingestion, grounded facts, and all 4 showcase cases |
 | **Live Production App** | [https://frontend-kappa-mauve-41.vercel.app](https://frontend-kappa-mauve-41.vercel.app) | Live deployment hosted on Vercel with all pre-seeded documents & analysis |
 | **GitHub Repository** | [IronLad123/claimsmap](https://github.com/IronLad123/claimsmap) | Full source code, test suites, and starter PDF datasets |
 | **Local Web UI** | `http://localhost:3000` | Local Next.js App Router frontend |
@@ -28,25 +28,125 @@ Every claim is strictly anchored with **verbatim source quotes**, normalized acr
 
 ---
 
-## 🎥 Video Walkthrough
+## Video Demo
 
-Watch the complete demonstration of ClaimsMap:
+Watch the complete demonstration of ClaimsMap (under 3 minutes):
 
-👉 **[Watch Video Walkthrough on Google Drive](https://drive.google.com/file/d/1rzCIw4Oeyoii2epKI63uCocfFp4S6LpG/view?usp=sharing)**
+👉 **[Watch Demo Video Walkthrough on Google Drive](https://drive.google.com/file/d/1rzCIw4Oeyoii2epKI63uCocfFp4S6LpG/view?usp=sharing)**
 
-**Covered in the walkthrough:**
-1. **Forensic Ingestion**: Uploading Delhivery's Q4 FY24 Earnings Presentation with coordinate-aware parsing and OrcaRouter LLM extraction.
-2. **Grounded Facts Explorer**: Substring verification, verbatim source citations, and real-time filtering across metrics and data types.
-3. **The 4 Benchmark Showcase Scenarios**:
-   - **Case 1 (Corroboration)**: ₹81,415M vs ₹8,142 Cr ($\Delta = 0.0056\%$).
-   - **Case 2 (Contradiction)**: RBI 11-month vs IMF 8-month forex import cover definitional denominator conflict.
-   - **Case 3A (Scope)**: Standalone parent vs consolidated group perimeters under Ind AS.
-   - **Case 3B (Methodology)**: Adjusted EBITDA cash operating proxy vs Ind AS statutory net PAT.
-4. **PDF Edge-Case Mitigations**: Table column-shift parenthetical negatives `(217)` $\rightarrow$ `-217` and superscript footnote contamination `18,793(1)` $\rightarrow$ `18,793`.
+**Demonstrated in the video:**
+1. **Interactive Ingestion**: Drag-and-drop PDF upload of Delhivery's Q4 FY24 Earnings Presentation with live 5-stage progress stepper.
+2. **Grounded Fact Explorer**: Substring verification, verbatim citations, page coordinates, and real-time filtering across metrics and data types.
+3. **The 4 Required Assignment Cases**: Complete walkthrough of Corroboration, Genuine Contradiction, Context-Reconciled, and Extraction Failure Mitigations.
+4. **Defensive Architecture**: Zero-hallucination verification and handling of parenthetical negatives and footnote contamination.
 
 ---
 
-## Architectural Pipeline
+## The Four Required Cases
+
+The assignment specification (*"Show Us These Four Cases"*, Page 1) requires at least one concrete example of each of the following four scenarios. ClaimsMap demonstrates all four with immutable source evidence, page numbers, verbatim quotes, and automated reconciliation rationale:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                             THE FOUR REQUIRED CASES                              │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│ 1. Corroborated Fact      → Delhivery FY24 Revenue: ₹81,415M (AR) vs ₹8,142 Cr   │
+│ 2. Genuine Contradiction   → Forex Import Cover: RBI 11 Months vs IMF 8 Months   │
+│ 3. Context Reconciliation  → Scope (Standalone vs Cons) & Methodology (EBITDA)   │
+│ 4. Extraction Failure Mode → Parenthetical Negatives `(217)` & Footnotes `18,793`│
+└──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Case 1: A Fact Corroborated Across Documents, Even If Expressed Differently
+* **Source A (Delhivery FY24 Annual Report, p. 22)**:
+  > *"Consolidated – FY ended March 31, 2024: Revenue from Operations 81,415.38 (Rs in Million)"*
+* **Source B (Delhivery Q4 FY24 Earnings Deck, p. 9)**:
+  > *"Revenue from services (Rs Cr) FY24: 8,142"*
+* **System Reasoning & Proof**:
+  Both figures refer to the same corporate reporting entity (*Delhivery Limited*), the same accounting scope (*Consolidated*), and the exact same fiscal period (*FY24: April 1, 2023 – March 31, 2024*).
+  $$\text{₹81,415.38 Million} \div 10 = \text{₹8,141.54 Crore} \approx \text{₹8,142 Crore}$$
+  The delta $\Delta = \frac{|8141.54 - 8142|}{8142} = 0.0056\%$ is well within the $1.5\%$ corporate rounding threshold.
+* **Verdict**: `CORROBORATED` (Confidence: 0.99)
+
+---
+
+### Case 2: A Genuine or Likely Contradiction
+* **Source A (RBI Annual Report 2024-25, p. 12)**:
+  > *"ample forex reserves at US$ 668.3 billion (as at end-March 2025), covering 11 months of merchandise imports"*
+* **Source B (IMF India 2025 Article IV Consultation, p. 12)**:
+  > *"FX reserves stood at 668 billion as of October, covering over eight months of prospective imports"*
+* **System Reasoning & Proof**:
+  A policymaker asking *"How many months of import cover do India's foreign exchange reserves provide?"* receives conflicting answers from two authoritative institutions (11 months vs. 8 months, $\Delta = 27.27\%$).
+  This is an **irreconcilable definitional conflict in the denominator**:
+  - The RBI uses **historical merchandise-only (goods) imports** on a trailing annualized basis.
+  - The IMF uses **prospective goods AND services imports combined** on a forward-looking 12-month basis.
+  Neither document provides a bridge table to harmonize the two.
+* **Verdict**: `GENUINE_CONTRADICTION` (Confidence: 0.90)
+
+---
+
+### Case 3: An Apparent Contradiction Explained by Context (Time, Scope, or Methodology)
+
+ClaimsMap proves two distinct subtypes of context-resolved conflicts:
+
+#### 3A. Context Reconciliation via Scope (Standalone vs. Consolidated)
+* **Source A (Delhivery FY24 Annual Report, p. 22)**: Standalone Revenue = **₹74,540.82 Million**
+* **Source B (Delhivery FY24 Annual Report, p. 22)**: Consolidated Revenue = **₹81,415.38 Million**
+* **System Reasoning & Context Resolution**:
+  Both figures appear in the same statutory audit for the same period. Under Indian Accounting Standards (Ind AS), standalone statements represent only the parent legal entity (*Delhivery Limited*), whereas consolidated statements include all operating subsidiaries (*primarily Spoton Logistics*). Spoton adds **₹6,874.56 Million** in revenue. This is a structural perimeter difference, not a factual contradiction.
+* **Verdict**: `RECONCILED_SCOPE` (Confidence: 0.95)
+
+#### 3B. Context Reconciliation via Methodology (Adjusted EBITDA vs. Statutory PAT)
+* **Source A (Delhivery Q4 FY24 Earnings Deck, p. 4)**: Adjusted EBITDA = **+₹76 Crore** (*"EBITDA Profitable"*)
+* **Source B (Delhivery FY24 Annual Report, p. 22)**: Consolidated Net Loss for the Year (PAT) = **-₹2,491.86 Million**
+* **System Reasoning & Context Resolution**:
+  The earnings presentation headlines profitability while the audited annual report records a multi-hundred-crore loss. These statements measure fundamentally different financial concepts:
+  - Adjusted EBITDA is a non-GAAP cash operating profit proxy that excludes depreciation, right-of-use lease amortisation (Ind AS 116), finance costs, and share-based compensation (ESOPs).
+  - Statutory PAT deducts all non-cash items (including ₹8,825+ Million in annual fleet/hub depreciation and Spoton customer contract amortisation).
+  Both figures are correct within their respective accounting frameworks.
+* **Verdict**: `RECONCILED_METHODOLOGY` (Confidence: 0.92)
+
+---
+
+### Case 4: An Extraction or Reasoning Failure Found and How We Handled It
+
+Standard off-the-shelf PDF text extractors and direct LLM prompt ingestion fail systematically on financial documents. Below are the two major failure modes discovered and how ClaimsMap engineered automated mitigations:
+
+| Failure Mode | Raw PDF String | Naive Extractor Output | ClaimsMap Sanitized Output | Root Cause & Mitigation Logic |
+|---|---|---|---|---|
+| **Failure 4A: Parenthetical Accounting Negatives** | `(217)  (125)  (67)` (Delhivery Q4 Deck, p. 14) | `217   125   67` *(sign inverted!)* | `-217  -125  -67` | **Root Cause**: Accounting notation places negative cashflows and losses in parentheses. Tokenizers strip parentheses as punctuation, turning losses into profits.<br>**ClaimsMap Mitigation**: Sanitizer Pass 1: `re.sub(r'\(([0-9,.]+)\)', r'-\1', text)` applied before number extraction, preserving true negative values. |
+| **Failure 4B: Superscript Footnote Contamination** | `18,793(1) PIN codes` (Delhivery Annual Report, p. 2) | `187,931 PIN codes` *(10× error!)* | `18,793 PIN codes` | **Root Cause**: PDF text streams concatenate superscript footnote references directly onto numerals without whitespace.<br>**ClaimsMap Mitigation**: Sanitizer Pass 2: `re.sub(r'([0-9,.]+)\s*\(\d+\)', r'\1', text)` strips footnote reference integers following numbers before parsing. |
+| **Failure 4C: Non-Aligned Table Column Drift** | Multi-column income statement matrix | Cells merged horizontally across quarters | Structured Matrix Grid | **Root Cause**: Plain PyPDF text dump destroys whitespace coordinate boundaries.<br>**ClaimsMap Mitigation**: `pdfplumber` bounding-box coordinate detection preserves row-column matrix cells prior to LLM chunking. |
+
+---
+
+## Brownie Points Implementation
+
+ClaimsMap addresses all four Brownie Points suggested on Page 2 of the assignment:
+
+### 1. Large PDFs Without Significant Performance Issues
+- **Bounded Memory Footprint**: Rather than loading multi-hundred-page PDFs into memory, `pdfplumber` and `PyMuPDF` stream page-by-page.
+- **Section-Aware Chunking**: Chunks are constrained to 512 tokens with 20% overlap, preventing LLM context window degradation.
+- **Safety Guards**: Enforces a 30 MB max upload limit and a 300-page per-document cap (`MAX_PAGE_COUNT = 300`) with structured error responses if breached.
+
+### 2. Many PDFs in the Same Knowledge Layer
+- **Quadratic Pruning**: Naive cross-document matching of $N$ facts requires $\mathcal{O}(N^2)$ comparisons. ClaimsMap utilizes **Entity & Metric Blocking**: candidate pairs are pre-filtered using Rapidfuzz token sort ratios (thresholds: entity $\ge 0.75$, metric $\ge 0.60$) before executing the 5-step classification cascade.
+- **Document Independence**: Facts from any number of documents live in a single unified SQLite knowledge base (`data/facts.db`), cross-linked via foreign keys.
+
+### 3. A Schema That Evolves Dynamically as New Facts Appear
+- **Zero Hardcoded Metrics**: The schema contains **no hardcoded enums or fixed metric lists** (e.g., no hardcoded "Revenue" or "EBITDA" constants).
+- **Context-Guided Discovery**: The LLM extracts whatever metric is described in the text (`metric_name: string`), dynamically categorizing it into `currency`, `count`, `percentage`, `volume`, or `semantic_statement`. New domains (e.g. healthcare, logistics, macro policy) produce domain-specific metrics automatically without database migration.
+
+### 4. Incremental Ingestion Without Rebuilding Knowledge
+- **SHA-256 Document & Chunk Deduplication**: Every document is identified by `file_hash = sha256(bytes)[:24]`. Re-uploading an existing document returns stored facts in $\mathcal{O}(1)$ time.
+- **Chunk-Level Caching (`ChunkCache`)**: Individual chunks are hashed. If a revised 100-page document is uploaded with only 5 modified pages, only the modified chunks invoke the LLM.
+- **Incremental Link Generation**: When document $D_{new}$ is ingested, the reconciliation engine compares $D_{new}$'s facts against existing facts in the database without recomputing links between historical documents.
+
+---
+
+## Approach & Architecture
+
+### System Architecture Pipeline
 
 ```mermaid
 flowchart TD
@@ -69,7 +169,7 @@ flowchart TD
 
     subgraph Reconciliation ["3. Cross-Document Reconciliation"]
         H --> I["Candidate Pair Matcher<br/>(Rapidfuzz entity & metric similarity)"]
-        I --> J{"Comparability Cascade"}
+        I --> J{"5-Step Comparability Cascade"}
         J -->|Δ <= 1.5% & Same T, S| K1["CORROBORATED"]
         J -->|Different Periods| K2["RECONCILED_TEMPORAL"]
         J -->|Standalone vs Consolidated| K3["RECONCILED_SCOPE"]
@@ -84,182 +184,78 @@ flowchart TD
     end
 ```
 
----
+### Key Engineering Decisions & Trade-Offs
 
-## Core Benchmark Showcase Scenarios
+1. **Local Parsing Before Any LLM Call**:
+   Raw PDF bytes are never streamed directly to an LLM. `pdfplumber` performs coordinate-aware table extraction, while `PyMuPDF` provides high-speed text extraction. This prevents mime-type errors, slashes token costs by ~85%, and enables deterministic cleaning of raw PDF stream glitches.
 
-The system is pre-seeded and tested against real-world documents from **Delhivery Limited**, the **Reserve Bank of India (RBI)**, and the **International Monetary Fund (IMF)**.
+2. **Deterministic Rules for Classification, LLM for Narrative Explanation**:
+   Whether two facts contradict or corroborate is decided by pure Python mathematical and temporal logic ($\Delta \le 1.5\%$, temporal overlap, scope checks). The LLM is only invoked to write the explanatory narrative *after* the verdict is locked. This eliminates non-deterministic hallucinated verdicts.
 
-### Case 1: Corroborated Facts Across Formats
-* **Source A (FY24 Annual Report, p. 22)**: Consolidated Revenue from Operations of **₹81,415.38 Million**.
-* **Source B (Q4 FY24 Earnings Deck, p. 9)**: Revenue from Services of **₹8,142 Crore**.
-* **Reconciliation Verdict**: `CORROBORATED` (Confidence: 0.99)
-* **Mathematical Proof**: 
-  $$\text{₹81,415.38 Million} \div 10 = \text{₹8,141.54 Crore} \approx \text{₹8,142 Crore}$$
-  Mathematical delta $\Delta = 0.0056\%$ (well below the $1.5\%$ corporate rounding threshold).
-
----
-
-### Case 2: Genuine Factual Contradiction
-* **Source A (RBI Annual Report 2024-25, p. 12)**: India's Forex Reserves provide **11 months** of import cover (as of March 2025).
-* **Source B (IMF Article IV Report 2025, p. 12)**: India's Forex Reserves provide **over 8 months** of import cover.
-* **Reconciliation Verdict**: `GENUINE_CONTRADICTION` (Delta: 27.27%)
-* **Root-Cause Analysis**: Irreconcilable definitional conflict. The RBI denominator measures historical merchandise-only imports, whereas the IMF uses a forward-looking 12-month goods and services denominator. Without an explicit cross-statement reconciliation table, these two figures contradict.
+3. **Strict Substring Grounding Gate**:
+   Every extracted fact must satisfy:
+   $$\text{verbatim\_quote} \subseteq \text{raw\_chunk\_text}$$
+   If an LLM hallucinates or alters a single word of the quoted evidence, the grounding verification flag fails and the fact is rejected or flagged.
 
 ---
 
-### Case 3A: Apparent Contradiction Reconciled by Scope
-* **Source A (FY24 Annual Report, p. 22)**: Standalone Revenue from Operations = **₹74,540.82 Million**.
-* **Source B (FY24 Annual Report, p. 22)**: Consolidated Revenue from Operations = **₹81,415.38 Million**.
-* **Reconciliation Verdict**: `RECONCILED_SCOPE` (Confidence: 0.95)
-* **Accounting Perimeter**: Under Indian Accounting Standards (Ind AS), standalone reports reflect only the parent entity (*Delhivery Limited*), while consolidated figures include subsidiaries (*Spoton Logistics*), adding **₹6,874.56 Million** in subsidiary freight revenues.
+## Setup and Run Instructions
 
----
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
 
-### Case 3B: Apparent Contradiction Reconciled by Methodology
-* **Source A (Q4 FY24 Earnings Deck, p. 4)**: Full-Year Adjusted EBITDA of **+₹76 Crore** (*"EBITDA Profitable"*).
-* **Source B (FY24 Annual Report, p. 22)**: Consolidated Statutory Loss for the year (PAT) of **-₹2,491.86 Million**.
-* **Reconciliation Verdict**: `RECONCILED_METHODOLOGY` (Confidence: 0.92)
-* **Financial Logic**: Adjusted EBITDA is a non-GAAP cash operating profit proxy that excludes depreciation, right-of-use asset amortisation (Ind AS 116), finance costs, and share-based compensation (ESOPs). Statutory PAT reflects bottom-line accounting reality after all non-cash amortisation. Both statements are accurate within their respective accounting frameworks.
-
----
-
-## Defensive Engineering: PDF Parsing Edge Cases
-
-Standard off-the-shelf PDF parsers routinely corrupt financial tables. ClaimsMap implements targeted preprocessing passes:
-
-| Edge Case | Raw PDF String | Naive Extractor Output | ClaimsMap Sanitized Output | Mitigation Logic |
-|---|---|---|---|---|
-| **Parenthetical Negatives** | `(217)  (125)` | `217  125` (Loss of sign) | `-217  -125` | `re.sub(r'\(([0-9,.]+)\)', r'-\1', text)` applied before whitespace compression |
-| **Footnote Contamination** | `18,793(1) PIN codes` | `187,931 PIN codes` (10x error) | `18,793 PIN codes` | `re.sub(r'([0-9,.]+)\s*\(\d+\)', r'\1', text)` strips superscript markers directly attached to numerals |
-| **Heterogeneous Fiscal Notation** | `FY24`, `FY2023-24`, `2023/24` | Incompatible strings | `2023-04-01` to `2024-03-31` | Normalized to standard ISO 8601 interval tuples |
-
----
-
-## Quickstart & Local Setup Instructions
-
+### Step 1: Clone Repository & Configure Environment
 ```bash
-# 1. Clone repository
 git clone https://github.com/IronLad123/claimsmap.git
 cd claimsmap
-
-# 2. Configure environment
 cp .env.example .env
-# Optional: add your OPENAI_COMPAT_API_KEY (OrcaRouter) or GEMINI_API_KEY
+```
 
-# 3. Start Backend
+### Step 2: Run the Full-Stack Application
+```bash
+# Terminal 1: Start FastAPI Backend
 cd backend
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-# 4. Start Frontend (in a second terminal)
+# Terminal 2: Start Next.js Frontend
 cd frontend
 npm install
 npm run dev
 ```
 
-Visit `http://localhost:3000` to interact with the application.
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:8000](http://localhost:8000)
+- **Interactive Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+*Note: The repository includes a pre-seeded `backend/data/facts.db` with all 8 documents and 31 benchmark facts. You can immediately browse and inspect without entering any API key.*
 
 ---
 
-## REST API Specification
+## Limitations and Next Steps
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/health` | Returns service status, active LLM provider, and model name |
-| `POST`| `/api/ingest` | Upload PDF multipart file (`file: bytes`), initiates 5-stage background job |
-| `GET` | `/api/ingest/{job_id}` | Polling endpoint returning live stage progress (`0% -> 100%`) and extraction counts |
-| `GET` | `/api/documents` | Lists all ingested documents with page counts and SHA-256 hashes |
-| `GET` | `/api/facts` | Searchable facts with query parameters: `entity`, `metric`, `data_type`, `limit` |
-| `GET` | `/api/links` | Returns cross-document links with `relation_type` filters and delta calculations |
-| `GET` | `/api/showcase` | Returns the 4 audited cross-document reconciliation benchmark scenarios |
+### Current Limitations
+1. **Scanned & OCR Documents**: The current parser relies on digital text streams (`pdfplumber`/`PyMuPDF`). Scanned bitmap PDFs without embedded OCR text require an upstream Tesseract/PaddleOCR layer.
+2. **Multi-hop Semantic Inferences**: While the system excels at 1-to-1 pair reconciliation, circular multi-document reconciliations ($A \rightarrow B \rightarrow C$) are resolved as independent pairwise links rather than a consolidated hypergraph.
+3. **Complex Nested Tables**: Extremely dense multi-column tables with merged vertical headers can occasionally have cell text spanning adjacent columns before sanitization.
 
----
-
-## Verification & Automated Test Suite
-
-The codebase enforces strict test coverage across all extraction, normalisation, and reconciliation modules.
-
-```bash
-# Run backend test suite
-cd backend
-PYTHONPATH=. python3 -m pytest tests/ -v
-```
-
-```text
-tests/test_api.py::test_health_endpoint PASSED                           [  3%]
-tests/test_api.py::test_documents_list PASSED                            [  6%]
-tests/test_api.py::test_facts_list PASSED                                [ 10%]
-tests/test_api.py::test_showcase_cases PASSED                            [ 13%]
-tests/test_extractor.py::test_grounding_verification PASSED               [ 17%]
-tests/test_extractor.py::test_hallucinated_quote_rejected PASSED         [ 20%]
-tests/test_extractor.py::test_deterministic_extraction PASSED             [ 24%]
-tests/test_reconciliation.py::test_corroborated PASSED                   [ 27%]
-tests/test_reconciliation.py::test_genuine_contradiction PASSED          [ 31%]
-tests/test_reconciliation.py::test_reconciled_temporal PASSED            [ 34%]
-tests/test_reconciliation.py::test_reconciled_scope PASSED               [ 37%]
-tests/test_reconciliation.py::test_incompatible_units_returns_none PASSED [ 41%]
-tests/test_sanitizer.py::test_parens_negative_simple PASSED              [ 44%]
-tests/test_sanitizer.py::test_footnote_strip PASSED                      [ 48%]
-tests/test_sanitizer.py::test_fy_normalization PASSED                     [ 51%]
-...
-======================== 29 passed in 0.39s ========================
-```
-
-Frontend strict TypeScript check:
-```bash
-cd frontend && npx tsc --noEmit
-# Exit code 0 — Zero errors
-```
+### What I Would Build Next
+1. **Visual In-PDF Bounding Box Highlighter**: Embed `PDF.js` in the UI to display the original PDF page side-by-side with an amber highlight over the exact bounding box of the extracted sentence.
+2. **ChromaDB Semantic Vector Indexing**: Integrate vector embeddings over facts so analysts can perform natural-language queries (e.g. *"Show all statements regarding Delhivery's Spoton acquisition synergies"*).
+3. **Active Human-in-the-Loop Feedback**: Allow analysts to click "Correct Verdict" on a case card to fine-tune the fuzzy threshold weights dynamically.
 
 ---
 
-## Repository Structure
+## Additional Notes
 
-```text
-claimsmap/
-├── .env.example               # Environment template (OrcaRouter, Gemini, DB)
-├── Makefile                   # Automation commands (dev, test, seed)
-├── README.md                  # System architecture & documentation
-├── package.json               # Root monorepo workspace configuration
-├── vercel.json                # Optional deployment configuration
-├── starter-datasets/          # Original evaluation PDF documents
-├── backend/
-│   ├── app/
-│   │   ├── config.py          # Provider configuration & upload limits
-│   │   ├── db.py              # SQLite engine & automatic schema migration
-│   │   ├── main.py            # FastAPI application factory & CORS setup
-│   │   ├── extraction/
-│   │   │   ├── extractor.py   # Fact extraction, grounding & validation
-│   │   │   └── llm.py         # Multi-provider client (OrcaRouter, Gemini)
-│   │   ├── ingestion/
-│   │   │   ├── parser.py      # pdfplumber matrix & PyMuPDF fallback
-│   │   │   └── sanitizer.py   # 3-pass regex normalisation engine
-│   │   ├── models/
-│   │   │   └── fact.py        # SQLModel table schemas (Fact, Link, Job)
-│   │   ├── reconciliation/
-│   │   │   ├── engine.py      # 5-step classification cascade
-│   │   │   ├── matcher.py     # Fuzzy entity/metric similarity
-│   │   │   └── normalizer.py  # Unit & currency scale converter
-│   │   └── routers/           # FastAPI modular API routers
-│   ├── data/facts.db          # Pre-seeded SQLite database
-│   └── tests/                 # 29 Pytest unit & integration tests
-└── frontend/
-    ├── app/
-    │   ├── layout.tsx         # Root layout with Inter font
-    │   ├── page.tsx           # Document ingestion & pipeline stepper
-    │   ├── facts/page.tsx     # Filterable facts explorer with grounding badges
-    │   ├── compare/page.tsx   # Cross-document analysis cards & summary metrics
-    │   ├── components/        # Dedicated client NavBar with active routing
-    │   ├── data/              # Exported seed dataset for offline/client fallback
-    │   └── api/               # Next.js App Router API Route Handlers
-    ├── next.config.ts         # Next.js 15 configuration & backend proxy rules
-    └── tailwind.config.ts     # Tailwind design system tokens
-```
+- **Live Production Deployment**: The application is also deployed live on Vercel at [https://frontend-kappa-mauve-41.vercel.app](https://frontend-kappa-mauve-41.vercel.app), equipped with self-contained App Router Route Handlers serving the audited benchmark facts and showcase comparisons.
+- **Automated Verification**: Run the 29-test Pytest suite with `cd backend && PYTHONPATH=. python3 -m pytest tests/ -v`.
+- **Submission Form**: Completed for Superjoin at [https://forms.gle/3fLdBQ2D6Zm2Gqtv7](https://forms.gle/3fLdBQ2D6Zm2Gqtv7).
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. Developed for the Superjoin Engineering Intern Hiring Assessment.
+MIT License. Built for the Superjoin VIT 2026 Engineering Intern Hiring Assignment by **Om Srivastava**.
