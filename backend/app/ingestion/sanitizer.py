@@ -2,8 +2,8 @@ import re
 from typing import Optional, Dict
 
 _PARENS_NEG = re.compile(r'\(([0-9][0-9,\.]+)\)')
-_FOOTNOTE = re.compile(r'([0-9,\.]+)\s*\(\d+\)')
-_SUPER_BRACKET = re.compile(r'([0-9,\.]+)\s*\[\d+\]')
+_FOOTNOTE = re.compile(r'([0-9,\.]+[a-zA-Z%]*)\s*\(\d+\)')
+_SUPER_BRACKET = re.compile(r'([0-9,\.]+[a-zA-Z%]*)\s*\[\d+\]')
 _FY_SHORT = re.compile(r'\bFY\s*(\d{2})\b')
 _FY_LONG = re.compile(r'\bFY\s*(\d{4})\b')
 _FY_SLASH = re.compile(r'\bFY\s*(\d{4})/(\d{2,4})\b')
@@ -12,12 +12,12 @@ _FY_DASH = re.compile(r'\bFY\s*(\d{4})-(\d{2,4})\b')
 
 def sanitize_text(text: str) -> str:
     """Apply all sanitization passes to raw PDF extracted text."""
-    # Pass 1: parenthetical negatives  (217) -> -217
-    text = _PARENS_NEG.sub(lambda m: f'-{m.group(1)}', text)
-    # Pass 2a: footnote markers  18,793(1) -> 18,793
+    # Pass 1: footnote and bracket markers  18,793(1) -> 18,793, 18,793[1] -> 18,793
+    # Must run BEFORE parenthetical negatives so (1) is not converted to -1
     text = _FOOTNOTE.sub(lambda m: m.group(1), text)
-    # Pass 2b: bracket markers  18,793[1] -> 18,793
     text = _SUPER_BRACKET.sub(lambda m: m.group(1), text)
+    # Pass 2: parenthetical negatives  (217) -> -217
+    text = _PARENS_NEG.sub(lambda m: f'-{m.group(1)}', text)
     return text
 
 

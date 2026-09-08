@@ -14,9 +14,10 @@ def test_parens_negative_only():
 
 
 def test_footnote_strip():
-    result = sanitize_text('18,793(1) PIN codes')
-    assert '18,793' in result
-    assert '(1)' not in result
+    assert sanitize_text('18,793(1)') == '18,793'
+    assert sanitize_text('(217)') == '-217'
+    assert sanitize_text('18,793(1) with loss (217)') == '18,793 with loss -217'
+    assert sanitize_text('>2.8Bn[1] shipments') == '>2.8Bn shipments'
 
 
 def test_fy24_short():

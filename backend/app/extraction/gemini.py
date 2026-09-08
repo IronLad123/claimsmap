@@ -1,13 +1,23 @@
 import hashlib
 import json
-from typing import List, Dict, Any
+import logging
+import time
+from typing import List, Dict, Any, Optional
 from sqlmodel import Session, select
 
 from app.config import GEMINI_API_KEY, DEMO_MODE
 from app.models.fact import ChunkCache
 
+logger = logging.getLogger("fact_layer.extraction")
+logging.basicConfig(level=logging.INFO)
+
 _pro_client = None
 _flash_client = None
+
+
+class GeminiExtractionError(Exception):
+    """Raised when Gemini API extraction fails critically."""
+    pass
 
 
 def _get_pro():
@@ -46,7 +56,7 @@ RULES:
 - metric_name is free-form — derive it entirely from document context. No fixed list.
 - Negative values are already in -N format (pre-processed before this prompt).
 - verbatim_quote must be a real substring of the chunk text.
-- For semantic facts (appointments, governance), set data_type to semantic_statement.
+- For semantic facts (appointments, governance, perimeter definitions), set data_type to semantic_statement.
 - If no extractable facts exist, return an empty array [].
 
 Output: a valid JSON array only. No markdown fences, no explanation.
@@ -76,8 +86,13 @@ def extract_facts_from_chunk(
     page_number: int,
     chunk_hash: str,
     session: Session,
-) -> List[Dict[str, Any]]:
-    """Extract facts from a chunk, using cache if available."""
+    max_retries: int = 2,
+) -> Optional[List[Dict[str, Any]]]:
+    """Extract facts from a chunk, using cache if available.
+    Returns None if demo mode or client unavailable (signals fallback to deterministic extractor).
+    Raises GeminiExtractionError if in live mode and Gemini fails after retries.
+    """
+    # Check cache
     cached = session.exec(
         select(ChunkCache).where(
             ChunkCache.document_id == document_id,
@@ -87,15 +102,15 @@ def extract_facts_from_chunk(
     if cached:
         try:
             return json.loads(cached.extracted_json)
-        except Exception:
-            return []
+        except Exception as e:
+            logger.warning("Corrupted cache for chunk %s: %s", chunk_hash, e)
 
-    if DEMO_MODE:
-        return []
+    if DEMO_MODE or not GEMINI_API_KEY:
+        return None
 
     client = _get_pro()
     if not client:
-        return []
+        return None
 
     prompt = EXTRACTION_PROMPT.format(
         document_id=document_id,
@@ -103,27 +118,41 @@ def extract_facts_from_chunk(
         chunk_text=chunk_text[:4000],
     )
 
-    try:
-        response = client.generate_content(prompt)
-        raw = response.text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[-1]
-            raw = raw.rsplit("```", 1)[0].strip()
-        facts = json.loads(raw)
-        if not isinstance(facts, list):
-            facts = []
-    except Exception:
-        facts = []
+    last_err = None
+    for attempt in range(max_retries + 1):
+        try:
+            logger.info("Extracting chunk %s (page %d), attempt %d", chunk_hash[:8], page_number, attempt + 1)
+            response = client.generate_content(prompt)
+            raw = response.text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[-1]
+                raw = raw.rsplit("```", 1)[0].strip()
+            facts = json.loads(raw)
+            if not isinstance(facts, list):
+                facts = []
 
-    cache_entry = ChunkCache(
-        document_id=document_id,
-        chunk_hash=chunk_hash,
-        extracted_json=json.dumps(facts),
+            # Save to cache
+            cache_entry = ChunkCache(
+                document_id=document_id,
+                chunk_hash=chunk_hash,
+                extracted_json=json.dumps(facts),
+            )
+            session.add(cache_entry)
+            session.commit()
+            return facts
+
+        except Exception as e:
+            last_err = e
+            logger.error(
+                "Gemini extraction failed for document %s, page %d (attempt %d/%d): %s",
+                document_id, page_number, attempt + 1, max_retries + 1, str(e),
+            )
+            if attempt < max_retries:
+                time.sleep(1.0 * (attempt + 1))
+
+    raise GeminiExtractionError(
+        f"Gemini extraction failed on page {page_number} after {max_retries + 1} attempts: {last_err}"
     )
-    session.add(cache_entry)
-    session.commit()
-
-    return facts
 
 
 def generate_explanation(
@@ -137,7 +166,7 @@ def generate_explanation(
     rationale: str,
 ) -> str:
     """Generate human-readable explanation for a cross-document link."""
-    if DEMO_MODE:
+    if DEMO_MODE or not GEMINI_API_KEY:
         return rationale
 
     client = _get_flash()
@@ -154,5 +183,7 @@ def generate_explanation(
     try:
         response = client.generate_content(prompt)
         return response.text.strip()
-    except Exception:
+    except Exception as e:
+        logger.warning("Gemini explanation generation failed: %s. Using deterministic rationale.", e)
         return rationale
+

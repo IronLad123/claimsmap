@@ -61,13 +61,42 @@ def test_corroborated_rbi_imf():
 
 
 def test_reconciled_methodology_ebitda_vs_pat():
-    """EBITDA positive but PAT negative — different metric definitions."""
+    """EBITDA positive but PAT negative — detected as RECONCILED_METHODOLOGY."""
     f1 = mk(document_id='deck', entity='Delhivery Limited', metric_name='Adjusted EBITDA',
             normalized_unit='INR', normalized_magnitude=760_000_000.0,
-            temporal_end='2024-03-31', temporal_label='FY24', accounting_basis='adjusted')
+            temporal_end='2024-03-31', temporal_label='FY24', accounting_basis='adjusted',
+            verbatim_quote='Full Year FY24 Adjusted EBITDA: +Rs 76 Cr (EBITDA profitable)')
     f2 = mk(document_id='ar', entity='Delhivery Limited', metric_name='Loss for the Year PAT',
             normalized_unit='INR', normalized_magnitude=-2_491_860_000.0,
-            temporal_end='2024-03-31', temporal_label='FY24', accounting_basis='consolidated')
-    # Different metric names → RECONCILED_METHODOLOGY (same unit, same T, same S[both have basis])
-    result = classify_pair(f1, f2)
-    assert result in ('RECONCILED_METHODOLOGY', 'RECONCILED_SCOPE')
+            temporal_end='2024-03-31', temporal_label='FY24', accounting_basis='consolidated',
+            verbatim_quote='Consolidated Loss for the year (FY24): Rs -2,491.86 Million')
+    assert classify_pair(f1, f2) == 'RECONCILED_METHODOLOGY'
+
+
+def test_reconciled_methodology_merchandise_vs_prospective():
+    """Merchandise import cover (RBI) vs Prospective imports cover (IMF)."""
+    f1 = mk(document_id='rbi', entity='India', metric_name='Forex Reserves Import Cover',
+            normalized_unit='MONTHS', normalized_magnitude=11.0,
+            temporal_end='2025-03-31', temporal_label='end-March 2025', accounting_basis=None,
+            verbatim_quote='covering 11 months of merchandise imports')
+    f2 = mk(document_id='imf', entity='India', metric_name='Forex Reserves Import Cover',
+            normalized_unit='MONTHS', normalized_magnitude=8.0,
+            temporal_end='2025-03-31', temporal_label='March 2025', accounting_basis=None,
+            verbatim_quote='covering over eight months of prospective imports')
+    assert classify_pair(f1, f2) == 'RECONCILED_METHODOLOGY'
+
+
+def test_semantic_facts_reconciliation():
+    """Semantic statements comparison without requiring numeric units."""
+    f1 = mk(document_id='pros', entity='Delhivery Limited', metric_name='Workforce Definition',
+            raw_value='Excludes daily wage and security guards',
+            normalized_unit='UNKNOWN', normalized_magnitude=None, data_type='semantic_statement',
+            temporal_label='December 2021', temporal_end='2021-12-31',
+            verbatim_quote='Includes permanent employees excluding daily wage manpower and security guards')
+    f2 = mk(document_id='ar', entity='Delhivery Limited', metric_name='Workforce Definition',
+            raw_value='Includes delivery partner agents',
+            normalized_unit='UNKNOWN', normalized_magnitude=None, data_type='semantic_statement',
+            temporal_label='March 2024', temporal_end='2024-03-31',
+            verbatim_quote='Includes permanent employees, contractual workers and last mile delivery partner agents')
+    # Different time periods -> RECONCILED_TEMPORAL
+    assert classify_pair(f1, f2) == 'RECONCILED_TEMPORAL'

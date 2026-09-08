@@ -29,6 +29,9 @@ class FactOut(BaseModel):
     verbatim_quote: str
     page_number: int
     confidence: float
+    grounding_verified: bool = True
+    chunk_hash: str = ""
+    extractor_model: str = "gemini-1.5-pro"
 
 
 class LinkOut(BaseModel):
@@ -55,9 +58,26 @@ class ShowcaseResponse(BaseModel):
 
 
 class IngestResponse(BaseModel):
-    document_id: str
+    job_id: Optional[str] = None
+    document_id: Optional[str] = None
     filename: str
-    page_count: int
-    fact_count: int
-    link_count: int
-    demo_mode: bool
+    status: str = "completed"
+    page_count: int = 0
+    fact_count: int = 0
+    link_count: int = 0
+    demo_mode: bool = False
+
+
+class IngestionJobOut(BaseModel):
+    job_id: str
+    document_id: Optional[str] = None
+    filename: str
+    status: str
+    stage: str
+    progress: float
+    message: str
+    fact_count: int = 0
+    link_count: int = 0
+    error_detail: Optional[str] = None
+    demo_mode: bool = False
+

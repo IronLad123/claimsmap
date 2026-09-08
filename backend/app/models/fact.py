@@ -34,6 +34,11 @@ class Fact(SQLModel, table=True):
     page_number: int = 0
     confidence: float = 0.8
     chunk_index: int = 0
+    file_hash: str = Field(default="")
+    chunk_hash: str = Field(default="")
+    extractor_model: str = Field(default="gemini-1.5-pro")
+    prompt_version: str = Field(default="v2.1")
+    grounding_verified: bool = Field(default=True)
 
 
 class CrossDocumentLink(SQLModel, table=True):
@@ -53,3 +58,20 @@ class ChunkCache(SQLModel, table=True):
     document_id: str
     chunk_hash: str
     extracted_json: str
+
+
+class IngestionJob(SQLModel, table=True):
+    __tablename__ = "ingestion_jobs"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    document_id: Optional[str] = None
+    filename: str
+    status: str = "queued"  # queued, parsing, extracting, reconciling, completed, failed
+    stage: str = "queued"
+    progress: float = 0.0
+    message: str = "Job created"
+    fact_count: int = 0
+    link_count: int = 0
+    error_detail: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+

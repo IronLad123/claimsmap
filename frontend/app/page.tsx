@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -13,12 +13,17 @@ interface DocItem {
   page_count: number
 }
 
-interface IngestResult {
-  document_id: string
+interface IngestJob {
+  job_id: string
+  document_id: string | null
   filename: string
-  page_count: number
+  status: 'queued' | 'parsing' | 'extracting' | 'reconciling' | 'completed' | 'failed'
+  stage: string
+  progress: number
+  message: string
   fact_count: number
   link_count: number
+  error_detail: string | null
   demo_mode: boolean
 }
 
@@ -47,13 +52,22 @@ function Spinner() {
   )
 }
 
+const STAGES = [
+  { key: 'queued', label: 'Uploaded' },
+  { key: 'parsing', label: 'Parsing' },
+  { key: 'extracting', label: 'Extracting' },
+  { key: 'reconciling', label: 'Reconciling' },
+  { key: 'completed', label: 'Complete' },
+]
+
 export default function HomePage() {
   const [uploading, setUploading] = useState(false)
-  const [result, setResult] = useState<IngestResult | null>(null)
+  const [activeJob, setActiveJob] = useState<IngestJob | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [docs, setDocs] = useState<DocItem[]>([])
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const router = useRouter()
 
   const fetchDocs = useCallback(async () => {
@@ -63,33 +77,104 @@ export default function HomePage() {
     } catch { /* server may not be up yet */ }
   }, [])
 
-  useEffect(() => { fetchDocs() }, [fetchDocs])
+  useEffect(() => {
+    fetchDocs()
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+    }
+  }, [fetchDocs])
+
+  const pollJobStatus = useCallback((jobId: string) => {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/api/ingest/${jobId}`)
+        if (!res.ok) throw new Error("Failed to query job status")
+        const data: IngestJob = await res.json()
+        setActiveJob(data)
+
+        if (data.status === 'completed') {
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+          setUploading(false)
+          fetchDocs()
+        } else if (data.status === 'failed') {
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+          setUploading(false)
+          setError(data.error_detail || data.message || "Extraction failed.")
+        }
+      } catch (err) {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+        setUploading(false)
+        setError(err instanceof Error ? err.message : "Polling error")
+      }
+    }, 800)
+  }, [fetchDocs])
 
   const uploadFile = useCallback(async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError('Only PDF files are supported.')
+      setError('Only PDF files (.pdf) are supported.')
       return
     }
+    if (file.size > 30 * 1024 * 1024) {
+      setError('File exceeds maximum size limit of 30 MB.')
+      return
+    }
+
     setUploading(true)
     setError(null)
-    setResult(null)
+    setActiveJob(null)
+
     const form = new FormData()
     form.append('file', file)
+
     try {
       const res = await fetch(`${API}/api/ingest`, { method: 'POST', body: form })
       if (!res.ok) {
         const body = await res.text()
         throw new Error(body || `HTTP ${res.status}`)
       }
-      const data: IngestResult = await res.json()
-      setResult(data)
-      fetchDocs()
+      const data = await res.json()
+
+      if (data.status === 'completed') {
+        // Immediate completion (e.g. duplicate document)
+        setActiveJob({
+          job_id: data.job_id || 'cached',
+          document_id: data.document_id,
+          filename: data.filename,
+          status: 'completed',
+          stage: 'completed',
+          progress: 1.0,
+          message: 'Document was previously ingested.',
+          fact_count: data.fact_count,
+          link_count: data.link_count,
+          error_detail: null,
+          demo_mode: data.demo_mode,
+        })
+        setUploading(false)
+        fetchDocs()
+      } else if (data.job_id) {
+        // Asynchronous background task queued
+        setActiveJob({
+          job_id: data.job_id,
+          document_id: null,
+          filename: data.filename,
+          status: 'queued',
+          stage: 'queued',
+          progress: 0.1,
+          message: 'Uploaded, queued for parsing...',
+          fact_count: 0,
+          link_count: 0,
+          error_detail: null,
+          demo_mode: data.demo_mode,
+        })
+        pollJobStatus(data.job_id)
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Upload failed. Is the backend running?')
-    } finally {
       setUploading(false)
     }
-  }, [fetchDocs])
+  }, [fetchDocs, pollJobStatus])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -104,6 +189,11 @@ export default function HomePage() {
     custom: 'Custom',
   }
 
+  const getStageIndex = (stage: string) => {
+    const idx = STAGES.findIndex(s => s.key === stage)
+    return idx >= 0 ? idx : 0
+  }
+
   return (
     <div className="space-y-8">
       {/* Page header */}
@@ -111,7 +201,7 @@ export default function HomePage() {
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Document Ingestion</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Upload a PDF to extract structured facts and run cross-document reconciliation.
+            Upload any financial or policy PDF to extract grounded facts and run cross-document reconciliation.
           </p>
         </div>
         {docs.length > 0 && (
@@ -151,10 +241,10 @@ export default function HomePage() {
             <UploadIcon className={`w-6 h-6 ${dragging ? 'text-violet-600' : 'text-gray-500'}`} />
           </div>
           <p className="text-sm font-medium text-gray-700">
-            {uploading ? 'Processing document…' : 'Drop a PDF here, or click to browse'}
+            {uploading ? 'Processing document pipeline…' : 'Drop a PDF here, or click to browse'}
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            {uploading ? 'Extracting facts and running reconciliation' : 'Any financial report, policy document, or research PDF'}
+            {uploading ? activeJob?.message || 'Extracting facts and linking...' : 'Supported: Financial reports, earnings presentations, policy PDFs (up to 30 MB)'}
           </p>
           {!uploading && (
             <button
@@ -166,7 +256,7 @@ export default function HomePage() {
             </button>
           )}
           {uploading && (
-            <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg opacity-80 cursor-not-allowed">
+            <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg opacity-90 cursor-not-allowed">
               <Spinner />
               Processing…
             </div>
@@ -174,47 +264,103 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Error state */}
-      {error && (
-        <div className="flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-          </svg>
-          {error}
+      {/* Live Pipeline Stepper & Progress Bar */}
+      {uploading && activeJob && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between text-xs font-medium text-gray-500">
+            <span className="text-gray-900 font-semibold truncate max-w-[300px]">{activeJob.filename}</span>
+            <span>{Math.round(activeJob.progress * 100)}%</span>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-violet-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${Math.max(activeJob.progress * 100, 5)}%` }}
+            />
+          </div>
+
+          {/* Stage steps */}
+          <div className="flex items-center justify-between pt-1">
+            {STAGES.map((s, idx) => {
+              const currentIdx = getStageIndex(activeJob.stage)
+              const isPast = idx < currentIdx
+              const isCurrent = idx === currentIdx
+
+              return (
+                <div key={s.key} className="flex items-center gap-2">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                    isPast
+                      ? 'bg-emerald-500 text-white'
+                      : isCurrent
+                      ? 'bg-violet-600 text-white animate-pulse'
+                      : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {isPast ? '✓' : idx + 1}
+                  </div>
+                  <span className={`text-xs ${isCurrent ? 'font-semibold text-violet-700' : isPast ? 'text-gray-700' : 'text-gray-400'}`}>
+                    {s.label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="text-xs text-gray-500 italic pt-1">{activeJob.message}</p>
         </div>
       )}
 
-      {/* Success state */}
-      {result && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {/* Error state */}
+      {error && (
+        <div className="flex items-start justify-between gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="flex items-start gap-2.5">
+            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-medium">Ingestion failed</p>
+              <p className="text-xs text-red-600 mt-0.5">{error}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-xs text-red-500 hover:text-red-700 font-medium"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Success result state */}
+      {!uploading && activeJob && activeJob.status === 'completed' && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xs">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                <svg className="w-4 h-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <svg className="w-4 h-4 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900">{result.filename}</p>
-                {result.demo_mode && (
-                  <p className="text-xs text-amber-600 mt-0.5">Running in demo mode — no API key required</p>
-                )}
+                <p className="text-sm font-semibold text-gray-900">{activeJob.filename}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {activeJob.message}
+                  {activeJob.demo_mode && " (Processed via deterministic extractor)"}
+                </p>
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 divide-x divide-gray-100">
-            {[
-              { label: 'Pages', value: result.page_count },
-              { label: 'Facts extracted', value: result.fact_count },
-              { label: 'Cross-doc links', value: result.link_count },
-            ].map(({ label, value }) => (
-              <div key={label} className="px-5 py-4 text-center">
-                <p className="text-2xl font-semibold text-gray-900">{value}</p>
-                <p className="text-xs text-gray-500 mt-1">{label}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 divide-x divide-gray-100">
+            <div className="px-5 py-4 text-center">
+              <p className="text-2xl font-semibold text-gray-900">{activeJob.fact_count}</p>
+              <p className="text-xs text-gray-500 mt-1">Facts extracted & grounded</p>
+            </div>
+            <div className="px-5 py-4 text-center">
+              <p className="text-2xl font-semibold text-gray-900">{activeJob.link_count}</p>
+              <p className="text-xs text-gray-500 mt-1">Cross-document links</p>
+            </div>
           </div>
-          <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex gap-3">
+          <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-3">
             <button
               onClick={() => router.push('/compare')}
               className="text-sm font-medium text-violet-600 hover:text-violet-700 transition-colors"
