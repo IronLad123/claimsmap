@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import create_db
 from app.routers import ingest, facts, links, showcase, documents
-from app.config import DEMO_MODE, ALLOWED_ORIGINS, LLM_PROVIDER, OLLAMA_MODEL, OLLAMA_BASE_URL
+from app.config import DEMO_MODE, ALLOWED_ORIGINS, LLM_PROVIDER, OLLAMA_MODEL, OLLAMA_BASE_URL, OPENAI_COMPAT_MODEL, OPENAI_COMPAT_BASE_URL
 
 app = FastAPI(
     title='ClaimsMap — Fact Knowledge Layer',
@@ -45,6 +45,10 @@ def health():
         'status': 'ok',
         'demo_mode': DEMO_MODE,
         'llm_provider': LLM_PROVIDER,
-        'ollama_model': OLLAMA_MODEL if LLM_PROVIDER == 'ollama' else None,
+        'model': (
+            OPENAI_COMPAT_MODEL if LLM_PROVIDER == 'openai_compat'
+            else OLLAMA_MODEL if LLM_PROVIDER == 'ollama'
+            else 'gemini-1.5-pro'
+        ),
         'ollama_online': ollama_online if LLM_PROVIDER == 'ollama' else None,
     }

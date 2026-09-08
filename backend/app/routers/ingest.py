@@ -16,7 +16,7 @@ from app.models.schemas import IngestResponse, IngestionJobOut
 from app.ingestion.parser import extract_document, get_page_count
 from app.extraction.extractor import process_chunks
 from app.reconciliation.engine import run_reconciliation
-from app.config import DEMO_MODE, MAX_UPLOAD_SIZE_BYTES, MAX_PAGE_COUNT, LLM_PROVIDER, OLLAMA_MODEL
+from app.config import DEMO_MODE, MAX_UPLOAD_SIZE_BYTES, MAX_PAGE_COUNT, LLM_PROVIDER, OLLAMA_MODEL, OPENAI_COMPAT_MODEL
 
 logger = logging.getLogger("fact_layer.ingest")
 router = APIRouter(prefix='/api', tags=['ingest'])
@@ -74,7 +74,9 @@ def process_ingestion_background(
             job.status = "extracting"
             job.stage = "extracting"
             job.progress = 0.55
-            if LLM_PROVIDER == "ollama":
+            if LLM_PROVIDER == "openai_compat":
+                mode_desc = f"OrcaRouter ({OPENAI_COMPAT_MODEL})"
+            elif LLM_PROVIDER == "ollama":
                 mode_desc = f"local Ollama ({OLLAMA_MODEL})"
             elif LLM_PROVIDER == "gemini":
                 mode_desc = "Gemini 1.5 Pro"

@@ -6,7 +6,7 @@ from sqlmodel import Session
 from app.ingestion.parser import Chunk
 from app.ingestion.sanitizer import parse_fy_to_iso, clean_numeric
 from app.extraction.llm import extract_facts_from_chunk, LLMExtractionError, is_ollama_online
-from app.config import OLLAMA_MODEL, LLM_PROVIDER
+from app.config import OLLAMA_MODEL, LLM_PROVIDER, OPENAI_COMPAT_MODEL
 from app.models.fact import Fact
 
 logger = logging.getLogger("fact_layer.extractor")
@@ -235,9 +235,14 @@ def process_chunks(
 
     for chunk in chunks:
         raw_facts = None
-        used_model = "gemini-1.5-pro"
+        if LLM_PROVIDER == "openai_compat":
+            used_model = f"orca-{OPENAI_COMPAT_MODEL}"
+        elif LLM_PROVIDER == "ollama":
+            used_model = f"ollama-{OLLAMA_MODEL}"
+        else:
+            used_model = "gemini-1.5-pro"
 
-        # Try primary extraction (Ollama or Gemini)
+        # Try primary extraction (OrcaRouter / Ollama / Gemini)
         try:
             raw_facts = extract_facts_from_chunk(
                 chunk_text=chunk.raw_text,
@@ -246,8 +251,6 @@ def process_chunks(
                 chunk_hash=chunk.hash(),
                 session=session,
             )
-            if raw_facts:
-                used_model = f"ollama-{OLLAMA_MODEL}" if is_ollama_online() else "gemini-1.5-pro"
         except LLMExtractionError as e:
             if not allow_fallback:
                 raise
