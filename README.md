@@ -6,6 +6,8 @@ ClaimsMap extracts structured financial and policy claims from PDF documents, gr
 
 Deployable standalone on **Vercel** with full pre-seeded data, or self-hosted with FastAPI.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FIronLad123%2Fclaimsmap)
+
 ---
 
 ## Setup and Run Instructions
