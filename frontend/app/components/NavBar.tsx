@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API = process.env.NEXT_PUBLIC_API_URL || ''
 
 const NAV = [
   { href: '/',        label: 'Ingest' },
@@ -52,7 +52,7 @@ export default function NavBar() {
         {/* Right side */}
         <div className="flex items-center gap-4">
           <a
-            href={`${API}/docs`}
+            href={API ? `${API}/docs` : 'http://localhost:8000/docs'}
             target="_blank"
             rel="noreferrer"
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"

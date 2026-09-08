@@ -1,8 +1,10 @@
-# Superjoin — Fact Knowledge Layer
+# ClaimsMap — Cross-Document Fact Verification
 
-> VIT 2026 · Engineering Intern Hiring Assignment
+> AI-Powered Fact Extraction, Evidence Grounding & Cross-Document Reconciliation
 
-A system that extracts meaningful facts from PDF documents, links every fact to its source evidence, and identifies when facts **corroborate**, **contradict**, or can be **reconciled through context** across documents.
+ClaimsMap extracts structured financial and policy claims from PDF documents, grounds every claim to an exact source quote, and reconciles claims across sources into corroborated facts, scope/methodology distinctions, or genuine contradictions.
+
+Deployable standalone on **Vercel** with full pre-seeded data, or self-hosted with FastAPI.
 
 ---
 
