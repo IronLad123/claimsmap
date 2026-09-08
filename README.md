@@ -1,6 +1,5 @@
 # ClaimsMap — Cross-Document Fact Verification & Reconciliation Layer
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FIronLad123%2Fclaimsmap)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688?logo=fastapi&logoColor=white)
 ![Next.js 15](https://img.shields.io/badge/Next.js-15.3.4-black?logo=next.js&logoColor=white)
@@ -17,14 +16,14 @@ Every claim is strictly anchored with **verbatim source quotes**, normalized acr
 
 ---
 
-## Live Demo & Deployment
+## Repository & Local Access
 
-| Environment | Link | Description |
+| Resource | Link | Description |
 |---|---|---|
-| **Vercel 1-Click Deploy** | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FIronLad123%2Fclaimsmap) | Instant standalone deployment with all pre-seeded documents & showcase cases |
-| **GitHub Repository** | [IronLad123/claimsmap](https://github.com/IronLad123/claimsmap) | Source code, test suites, and starter PDF datasets |
-| **Local Full-Stack** | `http://localhost:3000` | FastAPI uvicorn backend + Next.js App Router |
-| **API Docs (Swagger)** | `http://localhost:8000/docs` | Interactive OpenAPI documentation |
+| **GitHub Repository** | [IronLad123/claimsmap](https://github.com/IronLad123/claimsmap) | Full source code, test suites, and starter PDF datasets |
+| **Local Web UI** | `http://localhost:3000` | Next.js App Router frontend with real-time fact inspection |
+| **API Docs (Swagger)** | `http://localhost:8000/docs` | Interactive OpenAPI documentation for all endpoints |
+| **Health Check** | `http://localhost:8000/api/health` | Service status, active LLM provider, and model information |
 
 ---
 
@@ -118,16 +117,7 @@ Standard off-the-shelf PDF parsers routinely corrupt financial tables. ClaimsMap
 
 ---
 
-## Dual Deployment Modes
-
-### Mode 1: 1-Click Standalone Vercel Deployment
-ClaimsMap includes self-contained Next.js App Router API Route Handlers (`frontend/app/api/`) pre-loaded with the audited benchmark datasets.
-
-1. Click the **Deploy with Vercel** button above.
-2. Vercel automatically runs `npm --prefix frontend run build` (Next.js 15 Turbopack).
-3. The deployed app provides full interactive access to all facts, search filters, and showcase comparisons with zero external backend requirement.
-
-### Mode 2: Full-Stack Local Development
+## Quickstart & Local Setup Instructions
 
 ```bash
 # 1. Clone repository
@@ -213,8 +203,8 @@ claimsmap/
 ├── .env.example               # Environment template (OrcaRouter, Gemini, DB)
 ├── Makefile                   # Automation commands (dev, test, seed)
 ├── README.md                  # System architecture & documentation
-├── package.json               # Root monorepo package definition for Vercel
-├── vercel.json                # Root Vercel deployment specification
+├── package.json               # Root monorepo workspace configuration
+├── vercel.json                # Optional deployment configuration
 ├── starter-datasets/          # Original evaluation PDF documents
 ├── backend/
 │   ├── app/
@@ -243,7 +233,7 @@ claimsmap/
     │   ├── facts/page.tsx     # Filterable facts explorer with grounding badges
     │   ├── compare/page.tsx   # Cross-document analysis cards & summary metrics
     │   ├── components/        # Dedicated client NavBar with active routing
-    │   ├── data/              # Exported seed dataset for standalone Vercel
+    │   ├── data/              # Exported seed dataset for offline/client fallback
     │   └── api/               # Next.js App Router API Route Handlers
     ├── next.config.ts         # Next.js 15 configuration & backend proxy rules
     └── tailwind.config.ts     # Tailwind design system tokens
