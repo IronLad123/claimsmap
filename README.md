@@ -16,14 +16,14 @@ Every claim is strictly anchored with **verbatim source quotes**, normalized acr
 
 ---
 
-## Repository & Local Access
+## Live App & Repository
 
 | Resource | Link | Description |
 |---|---|---|
+| **Live Production App** | [https://frontend-kappa-mauve-41.vercel.app](https://frontend-kappa-mauve-41.vercel.app) | Live deployment hosted on Vercel with all pre-seeded documents & analysis |
 | **GitHub Repository** | [IronLad123/claimsmap](https://github.com/IronLad123/claimsmap) | Full source code, test suites, and starter PDF datasets |
-| **Local Web UI** | `http://localhost:3000` | Next.js App Router frontend with real-time fact inspection |
+| **Local Web UI** | `http://localhost:3000` | Local Next.js App Router frontend |
 | **API Docs (Swagger)** | `http://localhost:8000/docs` | Interactive OpenAPI documentation for all endpoints |
-| **Health Check** | `http://localhost:8000/api/health` | Service status, active LLM provider, and model information |
 
 ---
 
