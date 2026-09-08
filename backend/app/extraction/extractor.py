@@ -5,7 +5,8 @@ from sqlmodel import Session
 
 from app.ingestion.parser import Chunk
 from app.ingestion.sanitizer import parse_fy_to_iso, clean_numeric
-from app.extraction.gemini import extract_facts_from_chunk, GeminiExtractionError
+from app.extraction.llm import extract_facts_from_chunk, LLMExtractionError, is_ollama_online
+from app.config import OLLAMA_MODEL, LLM_PROVIDER
 from app.models.fact import Fact
 
 logger = logging.getLogger("fact_layer.extractor")
@@ -236,7 +237,7 @@ def process_chunks(
         raw_facts = None
         used_model = "gemini-1.5-pro"
 
-        # Try primary extraction
+        # Try primary extraction (Ollama or Gemini)
         try:
             raw_facts = extract_facts_from_chunk(
                 chunk_text=chunk.raw_text,
@@ -245,10 +246,12 @@ def process_chunks(
                 chunk_hash=chunk.hash(),
                 session=session,
             )
-        except GeminiExtractionError as e:
+            if raw_facts:
+                used_model = f"ollama-{OLLAMA_MODEL}" if is_ollama_online() else "gemini-1.5-pro"
+        except LLMExtractionError as e:
             if not allow_fallback:
                 raise
-            logger.warning("Gemini failed on chunk %s: %s. Using deterministic extractor fallback.", chunk.hash()[:8], e)
+            logger.warning("LLM extraction failed on chunk %s: %s. Using deterministic extractor fallback.", chunk.hash()[:8], e)
             raw_facts = None
 
         # Fallback to deterministic rule-based extractor

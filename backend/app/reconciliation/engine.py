@@ -7,7 +7,7 @@ from app.reconciliation.normalizer import (
     detect_methodology_difference, get_metric_family
 )
 from app.reconciliation.matcher import find_candidate_pairs, metric_sim
-from app.extraction.gemini import generate_explanation
+from app.extraction.llm import generate_explanation
 
 RATIONALES = {
     'CORROBORATED': (
